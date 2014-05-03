@@ -14,8 +14,10 @@ class UnmarshalTests(TestCase):
         eq_(gen.next(), ']')
 
     def test_unary(self):
-        eq_(''.join(self.encode('this is just a flat  string')),
-                    '"this is just a flat  string"')
+        eq_(
+            ''.join(self.encode('this is just a flat  string')),
+            '"this is just a flat  string"'
+        )
 
         eq_(''.join(self.encode(1)), "1")
 
@@ -32,8 +34,10 @@ class UnmarshalTests(TestCase):
         eq_(''.join(gen), '{"a":1,"b":2}')
 
     def test_true_false_null(self):
-        eq_(''.join(self.encode([True, False, None])), \
-                '[true,false,null]')
+        eq_(
+            ''.join(self.encode([True, False, None])),
+            '[true,false,null]'
+        )
 
     def test_longs(self):
         result = ''.join(self.encode([100L]))
@@ -97,14 +101,16 @@ class UnmarshalTests(TestCase):
 
     def test_utf8(self):
         eq_(
-            ''.join(flojay.JSONEncoder().\
-            iterencode([u'Ren\xc3e'])),
+            ''.join(flojay.JSONEncoder().iterencode([u'Ren\xc3e'])),
             '["' + u'Ren\xc3e'.encode('utf8') + '"]'
         )
 
     def test_beautify(self):
-        beauty = ''.join(flojay.JSONEncoder(beautify=True, indent_string=' ').\
-                iterencode(['a', {'b':2, 'c':3}]))
+        beauty = ''.join(
+            flojay.JSONEncoder(
+                beautify=True, indent_string=' '
+            ).iterencode(['a', {'b': 2, 'c': 3}])
+        )
         eq_(
             beauty,
             '[\n "a",\n {\n  "c": 3,\n  "b": 2\n }\n]\n')

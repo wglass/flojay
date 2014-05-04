@@ -6,22 +6,22 @@
 
 
 static PyMethodDef fj_encoder_methods[] = {
-  {
-    "__init__",
-    (PyCFunction)fj_encoder_init, METH_VARARGS | METH_KEYWORDS,
-    "Init"
-  },
-  {
-    "iterencode",
-    (PyCFunction)fj_encoder_iterencode, 1,
-    "Yield hunks of JSON now and again"
-  },
-  {
-    "default",
-    (PyCFunction)fj_encoder_default,  1,
-    "Default handler for objects of unknown type"
-  },
-  {NULL}  /* Sentinel */
+    {
+        "__init__",
+        (PyCFunction)fj_encoder_init, METH_VARARGS | METH_KEYWORDS,
+        "Init"
+    },
+    {
+        "iterencode",
+        (PyCFunction)fj_encoder_iterencode, 1,
+        "Yield hunks of JSON now and again"
+    },
+    {
+        "default",
+        (PyCFunction)fj_encoder_default,  1,
+        "Default handler for objects of unknown type"
+    },
+    {NULL}  /* Sentinel */
 };
 
 PyTypeObject fj_encoder_type = {
@@ -69,74 +69,80 @@ PyTypeObject fj_encoder_type = {
 PyObject *
 fj_encoder_default(PyObject * self, PyObject * args)
 {
-  PyObject * obj;
-  if(!PyArg_ParseTuple(args, "O", &obj))
+    PyObject * obj;
+    if( ! PyArg_ParseTuple(args, "O", &obj) ) {
+        return NULL;
+    }
+
+    PyObject * repr = PyObject_Repr(obj);
+    PyErr_Format(PyExc_TypeError,
+                 "%s is not JSON serializable", PyString_AsString(repr));
+
     return NULL;
-
-  PyObject * repr = PyObject_Repr(obj);
-  PyErr_Format(PyExc_TypeError, "%s is not JSON serializable", PyString_AsString(repr));
-
-  return NULL;
 }
 
 int
 fj_encoder_init(PyObject * pyself, PyObject * args, PyObject * kwords)
 {
-  static char *kwlist[] = {"default", "buffer_size", "beautify", "indent_string", NULL};
-  PyObject * default_func = Py_None;
-  PyObject * beautify;
-  char * indent_string;
-  size_t indent_string_size;
+    static char *kwlist[] = {
+        "default", "buffer_size", "beautify", "indent_string", NULL
+    };
+    PyObject * default_func = Py_None;
+    PyObject * beautify;
+    char * indent_string;
+    size_t indent_string_size;
 
-  size_t buffer_size = DEFAULT_BUFFER_SIZE;
-  struct fj_encoder * self = (struct fj_encoder *) pyself;
+    size_t buffer_size = DEFAULT_BUFFER_SIZE;
+    struct fj_encoder * self = (struct fj_encoder *) pyself;
 
-  if(!PyArg_ParseTupleAndKeywords(args, kwords, "|OiOz", kwlist,
-                                  &default_func, &buffer_size, &beautify, &indent_string))
-    return -1;
-
-  self->bufsize = buffer_size;
-  self->beautify = beautify;
-  if(indent_string == NULL) {
-    self->indent_string = NULL;
-  } else {
-    indent_string_size = strlen(indent_string);
-    self->indent_string = PyMem_New(char, indent_string_size + 1);
-    if(!self->indent_string) {
-      return -1;
+    if( ! PyArg_ParseTupleAndKeywords(args, kwords, "|OiOz", kwlist,
+                                      &default_func, &buffer_size,
+                                      &beautify, &indent_string) ) {
+        return -1;
     }
-    memcpy(self->indent_string, indent_string, indent_string_size + 1);
-  }
 
-  if(default_func && Py_None != default_func) {
-    Py_INCREF(default_func);
-    self->default_func = default_func;
-  } else {
-    self->default_func = PyObject_GetAttrString((PyObject *) self, "default");
-  }
+    self->bufsize = buffer_size;
+    self->beautify = beautify;
+    if( indent_string == NULL ) {
+        self->indent_string = NULL;
+    } else {
+        indent_string_size = strlen(indent_string);
+        self->indent_string = PyMem_New(char, indent_string_size + 1);
+        if( ! self->indent_string ) {
+            return -1;
+        }
+        memcpy(self->indent_string, indent_string, indent_string_size + 1);
+    }
 
-  return 0;
+    if( default_func && Py_None != default_func ) {
+        Py_INCREF(default_func);
+        self->default_func = default_func;
+    } else {
+        self->default_func = PyObject_GetAttrString((PyObject *) self, "default");
+    }
+
+    return 0;
 }
 
 PyObject *
 fj_encoder_iterencode(PyObject * self, PyObject * args)
 {
-  struct fj_generator * generator;
-  generator = (struct fj_generator *) fj_generator_new(&fj_generator_type,
-                                                       NULL, NULL);
+    struct fj_generator * generator;
+    generator = (struct fj_generator *) fj_generator_new(&fj_generator_type,
+                                                         NULL, NULL);
 
-  if(-1 == fj_generator_init(generator, self, args)) {
-    return NULL;
-  }
+    if( fj_generator_init(generator, self, args) == -1 ) {
+        return NULL;
+    }
 
-  return (PyObject *) generator;
+    return (PyObject *) generator;
 }
 
 void
 fj_encoder_dealloc(struct fj_encoder * self)
 {
-  if(NULL != self->indent_string) {
-    PyMem_Free(self->indent_string);
-  }
-  self->ob_type->tp_free((PyObject*)self);
+    if( self->indent_string != NULL ) {
+        PyMem_Free(self->indent_string);
+    }
+    self->ob_type->tp_free((PyObject*)self);
 }

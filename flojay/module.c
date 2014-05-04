@@ -16,13 +16,13 @@ static PyMethodDef FlojayMethods[] = {
 PyMODINIT_FUNC
 initflojay(void)
 {
-    if (PyType_Ready(&fj_encoder_type) < 0) {
+    if ( PyType_Ready(&fj_encoder_type) < 0 ) {
         return;
     }
-    if (PyType_Ready(&fj_parser_type) < 0) {
+    if ( PyType_Ready(&fj_parser_type) < 0 ) {
         return;
     }
-    if (PyType_Ready(&fj_generator_type) < 0) {
+    if ( PyType_Ready(&fj_generator_type) < 0 ) {
         return;
     }
 

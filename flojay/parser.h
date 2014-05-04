@@ -9,6 +9,7 @@
 
 struct fj_parser {
   PyObject_HEAD
+
   yajl_handle hand;
   PyObject *callbacks;
 };

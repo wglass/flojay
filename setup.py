@@ -2,7 +2,7 @@
 from setuptools import setup, Extension
 
 yajl_sources = [
-    'flojay/lloyd-yajl/src/' + file_
+    'flojay/yajl/src/' + file_
     for file_ in (
         'yajl.c', 'yajl_gen.c', 'yajl_alloc.c',
         'yajl_lex.c', 'yajl_tree.c',
@@ -26,7 +26,7 @@ flojay = Extension(
         ('MINOR_VERSION', '1')
     ],
     extra_compile_args=['--std=c99'],
-    include_dirs=['flojay/lloyd-yajl/src'],
+    include_dirs=['flojay/yajl/include', 'flojay/yajl/src'],
     sources=yajl_sources + flojay_sources
 )
 

@@ -6,13 +6,13 @@
 #include "generator.h"
 
 
-PyTypeObject flojay_generator_type = {
+PyTypeObject fj_generator_type = {
     PyObject_HEAD_INIT(NULL)
     0,                              /* ob_size */
     "flojay_generator",             /* tp_name */
-    sizeof(flojay_generator),       /* tp_basicsize */
+    sizeof(struct fj_generator),       /* tp_basicsize */
     0,                              /* tp_itemsize */
-    (destructor)flojay_generator_dealloc, /* tp_dealloc */
+    (destructor)fj_generator_dealloc, /* tp_dealloc */
     0,                              /* tp_print */
     0,                              /* tp_getattr */
     0,                              /* tp_setattr */
@@ -34,7 +34,7 @@ PyTypeObject flojay_generator_type = {
     0,                              /* tp_richcompare */
     0,                              /* tp_weaklistoffset */
     PyObject_SelfIter,              /* tp_iter */
-    (iternextfunc)flojay_generator_next, /* tp_iternext */
+    (iternextfunc)fj_generator_next, /* tp_iternext */
     0,                              /* tp_methods */
     0,                              /* tp_members */
     0,                              /* tp_getset */
@@ -45,21 +45,21 @@ PyTypeObject flojay_generator_type = {
     0,                              /* tp_dictoffset */
     0,                              /* tp_init */
     PyType_GenericAlloc,            /* tp_alloc */
-    flojay_generator_new            /* tp_new */
+    fj_generator_new            /* tp_new */
 };
 
 PyObject *
-flojay_generator_new(PyTypeObject * type, PyObject * args, PyObject * kwargs)
+fj_generator_new(PyTypeObject * type, PyObject * args, PyObject * kwargs)
 {
-  flojay_generator *self = (flojay_generator *)type->tp_alloc(type, 0);
+  struct fj_generator *self = (struct fj_generator *)type->tp_alloc(type, 0);
 
-  self->head = NULL;
+  self->stack = NULL;
 
   return (PyObject *) self;
 }
 
 static
-int flojay_encode(flojay_generator * self, PyObject * obj)
+int fj_encode(struct fj_generator * self, PyObject * obj)
 {
   char * buf;
   Py_ssize_t len;
@@ -74,11 +74,13 @@ int flojay_encode(flojay_generator * self, PyObject * obj)
   } else if(PyUnicode_Check(obj)) {
     PyObject * str = PyUnicode_AsUTF8String(obj);
     PyString_AsStringAndSize(str, &buf, &len);
-    status = yajl_gen_string(self->gen, (const unsigned char *) buf, (size_t) len);
+    status = yajl_gen_string(self->gen,
+                             (const unsigned char *) buf, (size_t) len);
     Py_XDECREF(str);
   } else if(PyString_Check(obj)) {
     PyString_AsStringAndSize(obj, &buf, &len);
-    status = yajl_gen_string(self->gen, (const unsigned char *) buf, (size_t) len);
+    status = yajl_gen_string(self->gen,
+                             (const unsigned char *) buf, (size_t) len);
   } else if(PyInt_Check(obj)) {
     status = yajl_gen_integer(self->gen, PyInt_AS_LONG(obj));
   } else if(PyNumber_Check(obj)) {
@@ -88,13 +90,13 @@ int flojay_encode(flojay_generator * self, PyObject * obj)
     Py_XDECREF(str);
   } else if(PySequence_Check(obj)) {
     status = yajl_gen_array_open(self->gen);
-    self->head = dfs_stack_push_seq(self->head, obj);
+    self->stack = fj_stack_push_seq(self->stack, obj);
   } else if(PyIter_Check(obj)) {
     status = yajl_gen_array_open(self->gen);
-    self->head = dfs_stack_push_gen(self->head, obj);
+    self->stack = fj_stack_push_gen(self->stack, obj);
   } else if(PyMapping_Check(obj)) {
     status = yajl_gen_map_open(self->gen);
-    self->head = dfs_stack_push_map(self->head, obj);
+    self->stack = fj_stack_push_map(self->stack, obj);
   } else {
     PyObject * newobj =
       PyObject_CallFunctionObjArgs(self->encoder->default_func, obj, NULL);
@@ -106,49 +108,50 @@ int flojay_encode(flojay_generator * self, PyObject * obj)
       Py_DECREF(newobj);
       return -1;
     }
-    int return_value = flojay_encode(self, newobj);
+    int return_value = fj_encode(self, newobj);
     Py_LeaveRecursiveCall();
     Py_DECREF(newobj);
     return return_value;
   }
 
-  return _flojay_handle_yajl_error(status);
+  return fj_handle_yajl_error(status);
 }
 
-static
-PyObject * _flojay_next_element(flojay_generator * self)
+static PyObject *
+fj_next_obj(struct fj_generator * self)
 {
   PyObject *key, *value;
 
-  switch(self->head->type) {
+  switch(self->stack->type) {
   case STACK_TYPE_SEQ:
-    if(self->head->index < self->head->length) {
-      PyObject *retval = PySequence_GetItem(self->head->elt, self->head->index);
-      self->head->index += 1;
+    if(self->stack->index < self->stack->length) {
+      PyObject *retval = PySequence_GetItem(self->stack->obj,
+                                            self->stack->index);
+      self->stack->index += 1;
       return retval;
     } else {
       return NULL;
     }
   case STACK_TYPE_MAP:
-    if(PyDict_Next(self->head->elt, &self->head->index, &key, &value)) {
-      flojay_encode(self, key);
+    if(PyDict_Next(self->stack->obj, &self->stack->index, &key, &value)) {
+      fj_encode(self, key);
       Py_INCREF(value);
       return value;
     } else {
       return NULL;
     }
   case STACK_TYPE_GEN:
-    return PyIter_Next(self->head->elt);
+    return PyIter_Next(self->stack->obj);
   default:
     return Py_None;
   }
 }
 
 void
-flojay_generator_dealloc(flojay_generator * self)
+fj_generator_dealloc(struct fj_generator * self)
 {
-    while(self->head != NULL) {
-      self->head = dfs_stack_pop(self->head);
+    while(self->stack != NULL) {
+      self->stack = fj_stack_pop(self->stack);
     }
 
     yajl_gen_free(self->gen);
@@ -158,14 +161,21 @@ flojay_generator_dealloc(flojay_generator * self)
 }
 
 int
-flojay_generator_init(flojay_generator * self, PyObject * encoder, PyObject * args)
+fj_generator_init(struct fj_generator * self,
+                  PyObject * encoder,
+                  PyObject * args)
 {
   PyObject * obj;
-  self->encoder = (flojay_JSONEncoderObject *) encoder;
+  self->encoder = (struct fj_encoder *) encoder;
   self->gen = yajl_gen_alloc(NULL);
-  yajl_gen_config(self->gen, yajl_gen_beautify, (self->encoder->beautify == Py_True) ? 1 : 0);
-  if(self->encoder->indent_string)
-    yajl_gen_config(self->gen, yajl_gen_indent_string, self->encoder->indent_string);
+  yajl_gen_config(self->gen,
+                  yajl_gen_beautify,
+                  (self->encoder->beautify == Py_True) ? 1 : 0);
+  if(self->encoder->indent_string) {
+    yajl_gen_config(self->gen,
+                    yajl_gen_indent_string,
+                    self->encoder->indent_string);
+  }
   yajl_gen_config(self->gen, yajl_gen_validate_utf8, 1);
 
   if(!PyArg_ParseTuple(args, "O", &obj))
@@ -175,7 +185,7 @@ flojay_generator_init(flojay_generator * self, PyObject * encoder, PyObject * ar
 
   Py_INCREF(encoder);
 
-  if(-1 == flojay_encode(self, obj)) {
+  if(-1 == fj_encode(self, obj)) {
     return -1;
   }
 
@@ -183,7 +193,7 @@ flojay_generator_init(flojay_generator * self, PyObject * encoder, PyObject * ar
 }
 
 PyObject *
-flojay_generator_next(flojay_generator * self)
+fj_generator_next(struct fj_generator * self)
 {
   PyObject * obj;
   char * buf;
@@ -191,11 +201,11 @@ flojay_generator_next(flojay_generator * self)
   yajl_gen_status status;
 
   while(1) {
-      if((NULL == self->head) || (self->head->type == STACK_TYPE_UNKNOWN)) {
+      if((NULL == self->stack) || (self->stack->type == STACK_TYPE_UNKNOWN)) {
           status = yajl_gen_get_buf(self->gen,
                                     (const unsigned char **) &buf,
                                     &len);
-          if(-1 == _flojay_handle_yajl_error(status)) {
+          if(-1 == fj_handle_yajl_error(status)) {
               return NULL;
           }
           if(len == 0) {
@@ -208,17 +218,17 @@ flojay_generator_next(flojay_generator * self)
           return str;
       }
 
-    obj = _flojay_next_element(self);
+    obj = fj_next_obj(self);
     if(NULL == obj) {
-      if((self->head->type == STACK_TYPE_SEQ)
-         || (self->head->type == STACK_TYPE_GEN)) {
+      if((self->stack->type == STACK_TYPE_SEQ)
+         || (self->stack->type == STACK_TYPE_GEN)) {
         yajl_gen_array_close(self->gen);
-      } else if(self->head->type == STACK_TYPE_MAP) {
+      } else if(self->stack->type == STACK_TYPE_MAP) {
         yajl_gen_map_close(self->gen);
       }
-      self->head = dfs_stack_pop(self->head);
+      self->stack = fj_stack_pop(self->stack);
     } else {
-      if(-1 == flojay_encode(self, obj)) {
+      if(-1 == fj_encode(self, obj)) {
         Py_DECREF(obj);
         return NULL;
       }
@@ -226,7 +236,7 @@ flojay_generator_next(flojay_generator * self)
     }
 
     status = yajl_gen_get_buf(self->gen, (const unsigned char **) &buf, &len);
-    if(-1 == _flojay_handle_yajl_error(status))
+    if(-1 == fj_handle_yajl_error(status))
       return NULL;
     if(len >= self->encoder->bufsize) {
       PyObject * str = PyString_FromStringAndSize(buf, (Py_ssize_t) len);

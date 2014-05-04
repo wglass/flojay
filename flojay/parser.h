@@ -7,25 +7,21 @@
 
 #define ENCODING "utf-8"
 
-typedef struct {
+struct fj_parser {
   PyObject_HEAD
   yajl_handle hand;
-  PyObject * callbacks;
-} flojay_JSONEventParserObject;
+  PyObject *callbacks;
+};
 
-int
-flojay_JSONEventParser_init(PyObject * pyself, PyObject * args);
+int fj_parser_init(PyObject *pyself, PyObject *args);
 
-PyObject *
-flojay_JSONEventParser_parse(PyObject * pyself, PyObject * args);
+PyObject * fj_parser_parse(PyObject *pyself, PyObject *args);
 
-void
-flojay_JSONEventParser_dealloc(flojay_JSONEventParserObject * self);
+void fj_parser_dealloc(struct fj_parser *self);
 
-void
-allocate_method_names(void);
+void allocate_method_names(void);
 
-extern PyTypeObject flojay_JSONEventParserType;
+extern PyTypeObject fj_parser_type;
 
 
 #endif

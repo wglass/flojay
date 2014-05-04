@@ -6,28 +6,28 @@
 #define DEFAULT_BUFFER_SIZE 4096
 
 
-typedef struct {
+struct fj_encoder {
   PyObject_HEAD
   PyObject * default_func;
   int ensure_ascii;
   size_t bufsize;
   PyObject * beautify;
   char * indent_string;
-} flojay_JSONEncoderObject;
+};
 
 PyObject *
-flojay_JSONEncoder_default(PyObject *self, PyObject *args);
+fj_encoder_default(PyObject *self, PyObject *args);
 
 int
-flojay_JSONEncoder_init(PyObject *self, PyObject *args, PyObject *kwargs);
+fj_encoder_init(PyObject *self, PyObject *args, PyObject *kwargs);
 
 PyObject *
-flojay_JSONEncoder_iterencode(PyObject *self, PyObject *args);
+fj_encoder_iterencode(PyObject *self, PyObject *args);
 
 void
-flojay_JSONEncoder_dealloc(flojay_JSONEncoderObject *self);
+fj_encoder_dealloc(struct fj_encoder *self);
 
-extern PyTypeObject flojay_JSONEncoderType;
+extern PyTypeObject fj_encoder_type;
 
 
 #endif

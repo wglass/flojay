@@ -4,27 +4,27 @@
 #include "parser.h"
 
 
-static PyMethodDef flojay_JSONEventParser_methods[] = {
+static PyMethodDef fj_parser_methods[] = {
   {
     "__init__",
-    (PyCFunction)flojay_JSONEventParser_init, 2,
+    (PyCFunction)fj_parser_init, 2,
     "Init!"
   },
   {
     "parse",
-    (PyCFunction)flojay_JSONEventParser_parse, 2,
+    (PyCFunction)fj_parser_parse, 2,
     "Parse a hunk of JSON and invoke appropriate callbacks."
   },
   {NULL}  /* Sentinel */
 };
 
-PyTypeObject flojay_JSONEventParserType = {
+PyTypeObject fj_parser_type = {
     PyObject_HEAD_INIT(NULL)
     0,                         /*ob_size*/
     "flojay.JSONEventParser",             /*tp_name*/
-    sizeof(flojay_JSONEventParserObject), /*tp_basicsize*/
+    sizeof(struct fj_parser), /*tp_basicsize*/
     0,                         /*tp_itemsize*/
-    (destructor)flojay_JSONEventParser_dealloc, /* tp_dealloc */
+    (destructor)fj_parser_dealloc, /* tp_dealloc */
     0,                         /*tp_print*/
     0,                         /*tp_getattr*/
     0,                         /*tp_setattr*/
@@ -47,7 +47,7 @@ PyTypeObject flojay_JSONEventParserType = {
     0,		               /* tp_weaklistoffset */
     0,		               /* tp_iter */
     0,		               /* tp_iternext */
-    flojay_JSONEventParser_methods,  /* tp_methods */
+    fj_parser_methods,  /* tp_methods */
     0,                         /* tp_members */
     0,                         /* tp_getset */
     0,                         /* tp_base */
@@ -55,7 +55,7 @@ PyTypeObject flojay_JSONEventParserType = {
     0,                         /* tp_descr_get */
     0,                         /* tp_descr_set */
     0,                         /* tp_dictoffset */
-    (initproc)flojay_JSONEventParser_init,   /* tp_init */
+    (initproc)fj_parser_init,   /* tp_init */
     PyType_GenericAlloc,       /* tp_alloc */
     PyType_GenericNew          /* tp_new */
 };
@@ -95,7 +95,7 @@ void allocate_method_names(void) {
 static int flojay_handle_null(void * self) {
 
   PyObject_CallMethodObjArgs(
-      ((flojay_JSONEventParserObject *) self)->callbacks,
+      ((struct fj_parser *) self)->callbacks,
       handle_null_method, NULL);
   return 1;
 }
@@ -103,7 +103,7 @@ static int flojay_handle_null(void * self) {
 static int flojay_handle_boolean(void * self,
                                  int boolean) {
   PyObject_CallMethodObjArgs(
-      ((flojay_JSONEventParserObject *) self)->callbacks,
+      ((struct fj_parser *) self)->callbacks,
       handle_boolean_method, PyBool_FromLong(boolean), NULL);
   return 1;
 }
@@ -122,7 +122,7 @@ static int flojay_handle_number(void * self,
     python_number = PyNumber_Float(str);
 
   PyObject_CallMethodObjArgs(
-      ((flojay_JSONEventParserObject *) self)->callbacks,
+      ((struct fj_parser *) self)->callbacks,
       handle_number_method, python_number, NULL);
   return 1;
 }
@@ -139,7 +139,7 @@ static int flojay_string_callback(void * self,
   };
 
   PyObject_CallMethodObjArgs(
-      ((flojay_JSONEventParserObject *) self)->callbacks,
+      ((struct fj_parser *) self)->callbacks,
       method_to_call, python_string, NULL);
 
   return 1;
@@ -152,7 +152,7 @@ static int flojay_handle_string(void * self, const unsigned char * str, size_t l
 
 static int flojay_handle_start_map(void * self) {
   PyObject_CallMethodObjArgs(
-      ((flojay_JSONEventParserObject *) self)->callbacks,
+      ((struct fj_parser *) self)->callbacks,
       handle_start_map_method, NULL);
   return 1;
 }
@@ -163,21 +163,21 @@ static int flojay_handle_map_key(void * self, const unsigned char * str, size_t 
 
 static int flojay_handle_end_map(void * self) {
   PyObject_CallMethodObjArgs(
-      ((flojay_JSONEventParserObject *) self)->callbacks,
+      ((struct fj_parser *) self)->callbacks,
       handle_end_map_method, NULL);
   return 1;
 }
 
 static int flojay_handle_start_array(void * self) {
   PyObject_CallMethodObjArgs(
-      ((flojay_JSONEventParserObject *) self)->callbacks,
+      ((struct fj_parser *) self)->callbacks,
       handle_start_array_method, NULL);
   return 1;
 }
 
 static int flojay_handle_end_array(void * self) {
   PyObject_CallMethodObjArgs(
-      ((flojay_JSONEventParserObject *) self)->callbacks,
+      ((struct fj_parser *) self)->callbacks,
       handle_end_array_method, NULL);
   return 1;
 }
@@ -197,9 +197,9 @@ static yajl_callbacks callbacks = {
 };
 
 int
-flojay_JSONEventParser_init(PyObject * pyself, PyObject * args)
+fj_parser_init(PyObject * pyself, PyObject * args)
 {
-  flojay_JSONEventParserObject * self = (flojay_JSONEventParserObject *) pyself;
+  struct fj_parser * self = (struct fj_parser *) pyself;
   if(!PyArg_ParseTuple(args, "O", &(self->callbacks)))
     return -1;
   Py_INCREF(self->callbacks);
@@ -212,7 +212,7 @@ flojay_JSONEventParser_init(PyObject * pyself, PyObject * args)
 }
 
 PyObject *
-flojay_JSONEventParser_parse(PyObject * pyself, PyObject * args)
+fj_parser_parse(PyObject *pyself, PyObject *args)
 {
   yajl_status stat;
   unsigned char * json_string = NULL;
@@ -225,7 +225,7 @@ flojay_JSONEventParser_parse(PyObject * pyself, PyObject * args)
   if(!json_string)
     return Py_None;
 
-  flojay_JSONEventParserObject * self = (flojay_JSONEventParserObject *) pyself;
+  struct fj_parser * self = (struct fj_parser *) pyself;
 
   stat = yajl_parse(self->hand, json_string, json_string_length);
 
@@ -244,7 +244,7 @@ flojay_JSONEventParser_parse(PyObject * pyself, PyObject * args)
 }
 
 void
-flojay_JSONEventParser_dealloc(flojay_JSONEventParserObject * self)
+fj_parser_dealloc(struct fj_parser *self)
 {
   yajl_free(self->hand);
   Py_DECREF(self->callbacks);

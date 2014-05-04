@@ -16,29 +16,29 @@ static PyMethodDef FlojayMethods[] = {
 PyMODINIT_FUNC
 initflojay(void)
 {
-    if (PyType_Ready(&flojay_JSONEncoderType) < 0) {
+    if (PyType_Ready(&fj_encoder_type) < 0) {
         return;
     }
-    if (PyType_Ready(&flojay_JSONEventParserType) < 0) {
+    if (PyType_Ready(&fj_parser_type) < 0) {
         return;
     }
-    if (PyType_Ready(&flojay_generator_type) < 0) {
+    if (PyType_Ready(&fj_generator_type) < 0) {
         return;
     }
 
     PyObject *module = Py_InitModule3("flojay", FlojayMethods,
                                       "flojay JSON encoder and parser, using yajl");
 
-    Py_INCREF(&flojay_JSONEncoderType);
-    Py_INCREF(&flojay_JSONEventParserType);
-    Py_INCREF(&flojay_generator_type);
+    Py_INCREF(&fj_encoder_type);
+    Py_INCREF(&fj_parser_type);
+    Py_INCREF(&fj_generator_type);
 
     PyModule_AddObject(module,
                        "JSONEncoder",
-                       (PyObject *)&flojay_JSONEncoderType);
+                       (PyObject *)&fj_encoder_type);
     PyModule_AddObject(module,
                        "JSONEventParser",
-                       (PyObject *)&flojay_JSONEventParserType);
+                       (PyObject *)&fj_parser_type);
 
     allocate_method_names();
 }

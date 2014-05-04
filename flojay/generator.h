@@ -8,26 +8,26 @@
 #include "encoder.h"
 
 
-typedef struct {
+struct fj_generator {
   PyObject_HEAD
-  struct dfs_stack * head;
+
   yajl_gen gen;
-  flojay_JSONEncoderObject * encoder;
-} flojay_generator;
 
-PyObject *
-flojay_generator_new(PyTypeObject * type, PyObject * args, PyObject * kwargs);
+  struct fj_stack *stack;
+  struct fj_encoder *encoder;
+};
 
-int
-flojay_generator_init(flojay_generator * self, PyObject * encoder, PyObject * args);
+PyObject *fj_generator_new(PyTypeObject *type,
+                           PyObject *args, PyObject *kwargs);
 
-void
-flojay_generator_dealloc(flojay_generator * self);
+int fj_generator_init(struct fj_generator *self,
+                      PyObject *encoder, PyObject *args);
 
-PyObject *
-flojay_generator_next(flojay_generator * self);
+void fj_generator_dealloc(struct fj_generator *self);
 
-extern PyTypeObject flojay_generator_type;
+PyObject * fj_generator_next(struct fj_generator *self);
+
+extern PyTypeObject fj_generator_type;
 
 
 #endif

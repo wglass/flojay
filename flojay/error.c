@@ -5,7 +5,7 @@
 #include "error.h"
 
 
-int _flojay_handle_yajl_error(yajl_gen_status status)
+int fj_handle_yajl_error(yajl_gen_status status)
 {
   if(status == yajl_gen_status_ok)
     return 0;

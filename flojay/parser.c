@@ -92,7 +92,8 @@ void allocate_method_names(void) {
 };
 
 
-static int flojay_handle_null(void * self) {
+static int
+fj_handle_null(void * self) {
 
     PyObject_CallMethodObjArgs(
                                ((struct fj_parser *) self)->callbacks,
@@ -100,16 +101,16 @@ static int flojay_handle_null(void * self) {
     return 1;
 }
 
-static int flojay_handle_boolean(void * self,
-                                 int boolean) {
+static int
+fj_handle_boolean(void * self, int boolean) {
     PyObject_CallMethodObjArgs(
                                ((struct fj_parser *) self)->callbacks,
                                handle_boolean_method, PyBool_FromLong(boolean), NULL);
     return 1;
 }
 
-static int flojay_handle_number(void * self,
-                                const char * number, size_t len) {
+static int
+fj_handle_number(void * self, const char * number, size_t len) {
     PyObject * str = PyString_FromStringAndSize(number, len);
     PyObject *python_number = PyNumber_Int(str);
 
@@ -127,9 +128,10 @@ static int flojay_handle_number(void * self,
     return 1;
 }
 
-static int flojay_string_callback(void * self,
-                                  PyObject * method_to_call,
-                                  const unsigned char * str, size_t len) {
+static int
+fj_string_callback(void * self,
+                       PyObject * method_to_call,
+                       const unsigned char * str, size_t len) {
 
     PyObject * python_string = PyUnicode_Decode((char *) str, len,
                                                 ENCODING, "strict");
@@ -145,37 +147,41 @@ static int flojay_string_callback(void * self,
     return 1;
 }
 
-static int flojay_handle_string(void * self, const unsigned char * str, size_t len) {
+static int
+fj_handle_string(void * self, const unsigned char * str, size_t len) {
 
-    return flojay_string_callback(self, handle_string_method, str, len);
+    return fj_string_callback(self, handle_string_method, str, len);
 }
 
-static int flojay_handle_start_map(void * self) {
+static int
+fj_handle_start_map(void * self) {
     PyObject_CallMethodObjArgs(
                                ((struct fj_parser *) self)->callbacks,
                                handle_start_map_method, NULL);
     return 1;
 }
 
-static int flojay_handle_map_key(void * self, const unsigned char * str, size_t len) {
-    return flojay_string_callback(self, handle_map_key_method, str, len);
+static int
+fj_handle_map_key(void * self, const unsigned char * str, size_t len) {
+    return fj_string_callback(self, handle_map_key_method, str, len);
 }
 
-static int flojay_handle_end_map(void * self) {
+static int
+fj_handle_end_map(void * self) {
     PyObject_CallMethodObjArgs(
                                ((struct fj_parser *) self)->callbacks,
                                handle_end_map_method, NULL);
     return 1;
 }
 
-static int flojay_handle_start_array(void * self) {
+static int fj_handle_start_array(void * self) {
     PyObject_CallMethodObjArgs(
                                ((struct fj_parser *) self)->callbacks,
                                handle_start_array_method, NULL);
     return 1;
 }
 
-static int flojay_handle_end_array(void * self) {
+static int fj_handle_end_array(void * self) {
     PyObject_CallMethodObjArgs(
                                ((struct fj_parser *) self)->callbacks,
                                handle_end_array_method, NULL);
@@ -183,17 +189,17 @@ static int flojay_handle_end_array(void * self) {
 }
 
 static yajl_callbacks callbacks = {
-    flojay_handle_null,
-    flojay_handle_boolean,
+    fj_handle_null,
+    fj_handle_boolean,
     NULL,
     NULL,
-    flojay_handle_number,
-    flojay_handle_string,
-    flojay_handle_start_map,
-    flojay_handle_map_key,
-    flojay_handle_end_map,
-    flojay_handle_start_array,
-    flojay_handle_end_array
+    fj_handle_number,
+    fj_handle_string,
+    fj_handle_start_map,
+    fj_handle_map_key,
+    fj_handle_end_map,
+    fj_handle_start_array,
+    fj_handle_end_array
 };
 
 int
@@ -223,8 +229,9 @@ fj_parser_parse(PyObject *pyself, PyObject *args)
         return NULL;
     }
 
-    if(!json_string)
+    if(!json_string) {
         return Py_None;
+    }
 
     struct fj_parser * self = (struct fj_parser *) pyself;
 
